@@ -12,6 +12,7 @@ TODO list:
 - [ ] **usable**
 - [ ] store chunk segment data compressed
 - [ ] store chunk segment data in sqlite or leveldb for better performance
+- [ ] force delete cached chunk when found a block update packet was sent within that chunk (maybe have some performance issues)
 - [ ] **almost finished**
 - [ ] multiple version compatibility
 - [ ] **finished**
