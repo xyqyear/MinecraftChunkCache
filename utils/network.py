@@ -2,22 +2,27 @@ import socket
 import threading
 from typing import *
 
+from quarry.types.buffer.v1_7 import Buffer1_7
+
 from utils.protocol import iter_packets_from_socket, no_process
 
 
-def forward(source: socket.socket, destination: socket.socket, process: Callable[[bytes], bytes]) -> None:
+def forward(source: socket.socket, destination: socket.socket, process: Callable[[Buffer1_7], bytes]) -> None:
     """
     receive packets from source, process them using process function and send them to destination
     """
-    for packet in iter_packets_from_socket(source):
-        packet = process(packet)
+    for packet_buff in iter_packets_from_socket(source):
+        packet = process(packet_buff)
         destination.sendall(packet)
     source.close()
     destination.close()
 
 
 def proxy(listen_ip: str, listen_port: int, dst_ip: str, dst_port: int,
-          s2c_process: Callable[[bytes], bytes], c2s_process: Callable[[bytes], bytes] = no_process) -> None:
+          s2c_process: Callable[[Buffer1_7], bytes], c2s_process: Callable[[Buffer1_7], bytes] = no_process) -> None:
+    """
+    a proxy that forwards data
+    """
     while True:
         try:
             proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
