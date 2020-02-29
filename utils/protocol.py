@@ -43,14 +43,6 @@ def unpack_original_chunk_data_1_15(data: bytes) -> Tuple[int, int, List[bytes]]
 
     origin:
     https://github.com/barneygale/quarry/blob/master/docs/data_types/chunks.rst
-
-    x, z, full = buff.unpack('ii?')
-    bitmask = buff.unpack_varint()
-    heightmap = buff.unpack_nbt()  # added in 1.14
-    biomes = buff.unpack_array('I', 1024) if full else None  # changed in 1.15
-    sections_length = buff.unpack_varint()
-    sections = buff.unpack_chunk(bitmask)
-    block_entities = [buff.unpack_nbt() for _ in range(buff.unpack_varint())]
     """
     buff = CustomOriginalBuffer114(data)
 
@@ -70,39 +62,22 @@ def unpack_original_chunk_data_1_15(data: bytes) -> Tuple[int, int, List[bytes]]
 class CustomOriginalBuffer114(Buffer1_14):
     def unpack_chunk_section_palette(self, value_width):
         """
-        origin:
-
-        # return [self.unpack_varint() for _ in range(self.unpack_varint())]
+        origin: quarry.types.buffer.v1_13.Buffer1_13
         """
-        palette_num = self.unpack_varint()
-        palette_bytes = b''
-        for _ in range(palette_num):
-            palette_bytes += self.unpack_varint_bytes()
+        if value_width > 8:
+            return
+        else:
+            palette_num = self.unpack_varint()
+            palette_bytes = b''
+            for _ in range(palette_num):
+                palette_bytes += self.unpack_varint_bytes()
 
-        palette_num_bytes = self.pack_varint(palette_num)
-        return palette_num_bytes + palette_bytes
+            palette_num_bytes = self.pack_varint(palette_num)
+            return palette_num_bytes + palette_bytes
 
     def unpack_varint_bytes(self):
         """
-        # origin:
-
-        number = 0
-        for i in xrange(10):
-            b = self.unpack("B")
-            number |= (b & 0x7F) << 7*i
-            if not b & 0x80:
-                break
-
-        if number & (1 << 31):
-            number -= 1 << 32
-
-        number_min = -1 << (max_bits - 1)
-        number_max = +1 << (max_bits - 1)
-        if not (number_min <= number < number_max):
-            raise ValueError("varint does not fit in range: %d <= %d < %d"
-                             % (number_min, number, number_max))
-
-        return number
+        # origin: quarry.types.buffer.v1_7.Buffer1_7
         """
 
         varint_bytes = b''
@@ -117,18 +92,9 @@ class CustomOriginalBuffer114(Buffer1_14):
     def unpack_chunk_section(self, overworld=True):
         """
         Unpacks a chunk section. Returns bytes.
-        origin:
-
-        non_air, value_width = self.unpack('HB')
-        palette = self.unpack_chunk_section_palette(value_width)
-        array = self.unpack_chunk_section_array(value_width)
-        return BlockArray.from_bytes(
-            bytes=array,
-            palette=palette,
-            registry=self.registry,
-            non_air=non_air,
-            value_width=value_width), None, None
+        origin: quarry.types.buffer.v1_9.Buffer1_9
         """
+
         non_air_bytes = self.read(2)
         value_width_bytes = self.read(1)
         value_width = struct.unpack('B', value_width_bytes)[0]
