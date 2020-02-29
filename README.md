@@ -4,8 +4,8 @@ TODO list:
 
 - [x] simple port forward
 - [x] separate packets
-- [ ] separate chunk_data packet
-- [ ] separate chunk segment data
+- [x] separate chunk_data packet
+- [x] separate chunk segment data
 - [ ] assign each segment data a coordinate and store data in a simple form (maybe single json file)
 - [ ] hash chunk segment data and design protocol
 - [ ] finished custom chunk_data protocol implementation
