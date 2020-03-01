@@ -8,10 +8,14 @@ TODO list:
 - [x] separate chunk segment data
 - [x] compress packet using the minecraft way
 - [x] setup database
-- [ ] assign each segment data a coordinate and store data in a simple form (maybe single json file)
-- [ ] hash chunk segment data and design protocol
-- [ ] finished custom chunk_data protocol implementation
+- [x] store chunk section hash (server side)
+- [ ] finish custom chunk data protocol
+- [ ] store chunk section data (client side)
+- [ ] finish biomes data part
+- [ ] add support for multiple clients (client send client ID to server when establish connection, maybe)
 - [ ] **usable**
+- [ ] finish light data part
+- [ ] acknowledge server when local file changes (usually user deletion)
 - [ ] force delete cached chunk when found a block update packet was sent within that chunk (maybe have some performance issues)
 - [ ] **almost finished**
 - [ ] multiple version compatibility
