@@ -2,8 +2,6 @@ import socket
 import threading
 from typing import *
 
-from quarry.types.buffer.v1_7 import Buffer1_7
-
 from utils.protocol import iter_packets_from_socket, no_process
 
 

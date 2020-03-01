@@ -1,7 +1,3 @@
-import socket
-
-from quarry.types.buffer.v1_7 import Buffer1_7
-
 from utils.network import proxy
 
 listen_ip = '127.0.0.1'

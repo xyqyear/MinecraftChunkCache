@@ -1,5 +1,3 @@
-import socket
-
 from utils.network import proxy
 from utils.protocol import PacketChunkData, auto_unpack_pack
 from quarry.types.buffer.v1_7 import Buffer1_7

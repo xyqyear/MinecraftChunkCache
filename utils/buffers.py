@@ -1,6 +1,5 @@
 import struct
 
-
 from quarry.types.buffer import BufferUnderrun
 from quarry.types.buffer.v1_14 import Buffer1_14
 
