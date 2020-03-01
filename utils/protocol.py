@@ -23,7 +23,7 @@ def server_auto_unpack_pack(func):
 
         packet_data = func(packet)
 
-        return Buffer1_7.pack_packet(packet_data)
+        return Buffer1_7.pack_packet(packet_data, 256)
     return wrapper
 
 
@@ -37,7 +37,10 @@ def client_auto_unpack_pack(func):
     """
     def wrapper(packet_bytes: bytes) -> bytes:
         packet_buff = Buffer1_7(packet_bytes)
-        packet = packet_buff.unpack_packet(Buffer1_7)
+        packet = packet_buff.unpack_packet(Buffer1_7, 256)
+        # the buff in the packet includes uncompressed length
+        # need call save to make sure buff only contains packet data
+        packet.save()
 
         packet_data = func(packet)
 
