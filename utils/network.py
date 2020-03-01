@@ -10,6 +10,9 @@ from utils.protocol import iter_packets_from_socket, no_process
 def forward(source: socket.socket, destination: socket.socket, process: Callable[[bytes], bytes]) -> None:
     """
     receive packets from source, process them using process function and send them to destination
+
+    note: process function should receive a FULL network packet and return a FULL network packet.
+          there is a auto_unpack_pack function you can use to simplify this process
     """
     for packet in iter_packets_from_socket(source):
         packet = process(packet)

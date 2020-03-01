@@ -63,7 +63,7 @@ class CustomBaseBuffer:
     """
     origin: quarry.types.buffer.v1_7.Buffer1_7
     """
-    buff = b""
+    buff = b''
     pos = 0
 
     def __init__(self, data: bytes = b''):
@@ -93,7 +93,7 @@ class CustomBaseBuffer:
 
         self.pos = 0
 
-    def read(self, length: int = 0):
+    def read(self, length: int = 0) -> bytes:
         """
         Read *length* bytes from the beginning of the buffer, or all bytes if
         *length* is ``None``
@@ -146,9 +146,11 @@ class CustomBaseBuffer:
 
         return number
 
-    def unpack_packet(self) -> bytes:
+    def recv_packet(self) -> bytes:
         """
         Unpacks a packet frame. This method handles length-prefixing and
         compression.
         """
-        return self.read(self.unpack_varint())
+        packet_len = self.unpack_varint()
+        packet_len_bytes = Buffer1_14.pack_varint(packet_len)
+        return packet_len_bytes + self.read(packet_len)

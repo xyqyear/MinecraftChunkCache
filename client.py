@@ -10,8 +10,8 @@ dst_ip = '127.0.0.1'
 dst_port = 2000
 
 
-def tweak(buff: Buffer1_7) -> bytes:
-    return Buffer1_7.pack_packet(buff.buff)
+def tweak(buff_bytes: bytes) -> bytes:
+    return buff_bytes
 
 
 if __name__ == '__main__':

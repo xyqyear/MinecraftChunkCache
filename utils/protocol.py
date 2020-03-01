@@ -9,6 +9,24 @@ from typing import *
 from utils.buffers import CustomBaseBuffer, CustomOriginalBuffer114
 
 
+def auto_unpack_pack(func):
+    """
+    this decorator can help you
+    retract data from full network packet
+    (trim packet length, return a Buffer)
+    and wrap the data you returned into a full network packet
+    (re-calculate packet length and return a full network packet)
+    """
+    def wrapper(packet_bytes: bytes) -> bytes:
+        packet_buff = Buffer1_7(packet_bytes)
+        packet: Buffer1_7 = packet_buff.unpack_packet(Buffer1_7)
+
+        packet_data = func(packet)
+
+        return packet_buff.pack_packet(packet_data)
+    return wrapper
+
+
 def no_process(buff: bytes) -> bytes:
     return buff
 
@@ -18,10 +36,15 @@ def iter_packets_from_socket(source: socket.socket) -> Iterator[bytes]:
     return: Buffer1_7 (without the first 'length' varint)
     separate packets from data received
     """
-    recv_buff = Buffer1_7()
+    recv_buff = CustomBaseBuffer()
     while True:
         # handling network outside of network.py, but can not figure out a better way of doing this
-        data = source.recv(1024)
+        try:
+            data = source.recv(1024)
+        except ConnectionResetError:
+            data = None
+        except ConnectionAbortedError:
+            data = None
         if not data:
             break
 
@@ -30,8 +53,7 @@ def iter_packets_from_socket(source: socket.socket) -> Iterator[bytes]:
         while True:
             recv_buff.save()
             try:
-                packet = recv_buff.unpack_packet(CustomBaseBuffer)
-                yield packet
+                yield recv_buff.recv_packet()
             except BufferUnderrun:
                 recv_buff.restore()
                 break
