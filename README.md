@@ -6,7 +6,7 @@ TODO list:
 - [x] separate packets
 - [x] separate chunk_data packet
 - [x] separate chunk segment data
-- [ ] compress packet using the minecraft way
+- [x] compress packet using the minecraft way
 - [ ] assign each segment data a coordinate and store data in a simple form (maybe single json file)
 - [ ] hash chunk segment data and design protocol
 - [ ] finished custom chunk_data protocol implementation
