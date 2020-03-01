@@ -4,7 +4,7 @@ from quarry.types.buffer import BufferUnderrun
 from quarry.types.buffer.v1_14 import Buffer1_14
 
 
-class CustomOriginalBuffer114(Buffer1_14):
+class CustomVanillaBuffer114(Buffer1_14):
     def unpack_chunk_section_palette_bytes(self, value_width):
         """
         origin: quarry.types.buffer.v1_13.Buffer1_13
@@ -58,7 +58,7 @@ class CustomOriginalBuffer114(Buffer1_14):
         return non_air_bytes + value_width_bytes + palette + array
 
 
-class CustomBaseBuffer:
+class BaseBuffer:
     """
     origin: quarry.types.buffer.v1_7.Buffer1_7
     """
@@ -110,6 +110,15 @@ class CustomBaseBuffer:
 
         return data
 
+    @classmethod
+    def pack(cls, fmt, *fields):
+        """
+        Pack *fields* into a struct. The format accepted is the same as for
+        ``struct.pack()``.
+        """
+
+        return struct.pack(">"+fmt, *fields)
+
     def unpack(self, fmt: str):
         """
         Unpack a struct. The format accepted is the same as for
@@ -122,7 +131,26 @@ class CustomBaseBuffer:
             fields = fields[0]
         return fields
 
-    def unpack_varint(self, max_bits: int = 32):
+
+class VarIntBuffer(BaseBuffer):
+    @classmethod
+    def pack_varint(cls, number):
+        """
+        Packs a varint.
+        """
+        if number < 0:
+            number += 1 << 32
+
+        out = b""
+        for i in range(10):
+            b = number & 0x7F
+            number >>= 7
+            out += cls.pack("B", b | (0x80 if number > 0 else 0))
+            if number == 0:
+                break
+        return out
+
+    def unpack_varint(self, max_bits=32):
         """
         Unpacks a varint.
         """
@@ -137,14 +165,10 @@ class CustomBaseBuffer:
         if number & (1 << 31):
             number -= 1 << 32
 
-        number_min = -1 << (max_bits - 1)
-        number_max = +1 << (max_bits - 1)
-        if not (number_min <= number < number_max):
-            raise ValueError("varint does not fit in range: %d <= %d < %d"
-                             % (number_min, number, number_max))
-
         return number
 
+
+class BasicPacketBuffer(VarIntBuffer):
     def recv_packet(self) -> bytes:
         """
         Unpacks a packet frame. This method handles length-prefixing and

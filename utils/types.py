@@ -2,7 +2,7 @@ from typing import *
 
 from quarry.types.nbt import TagRoot
 
-from utils.buffers import CustomOriginalBuffer114
+from utils.buffers import CustomVanillaBuffer114
 
 
 class Bits:
@@ -49,7 +49,13 @@ class PacketChunkData:
     cached_section_mask: int
 
     def __init__(self, data: bytes):
-        self.buff = CustomOriginalBuffer114(data)
+        self.buff = CustomVanillaBuffer114(data)
+
+    def unpack_custom_packet_data(self):
+        pass
+
+    def pack_custom_packet_data(self):
+        pass
 
     def unpack_vanilla_packet_data(self):
         """

@@ -6,7 +6,7 @@ from quarry.types.buffer.v1_7 import Buffer1_7
 
 from typing import *
 
-from utils.buffers import CustomBaseBuffer
+from utils.buffers import BasicPacketBuffer
 
 
 def server_auto_unpack_pack(func):
@@ -57,7 +57,7 @@ def iter_packets_from_socket(source: socket.socket) -> Iterator[bytes]:
     return: Buffer1_7 (without the first 'length' varint)
     separate packets from data received
     """
-    recv_buff = CustomBaseBuffer()
+    recv_buff = BasicPacketBuffer()
     while True:
         # handling network outside of network.py, but can not figure out a better way of doing this
         try:
