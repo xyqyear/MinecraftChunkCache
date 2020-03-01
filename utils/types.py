@@ -23,25 +23,49 @@ class Bits:
 
 
 class PacketChunkData:
+    # vanilla protocol
+    x: int
+    z: int
+    full: bool
+    bitmask: Bits
+    heightmap: TagRoot
+    biomes: bytes
+    section_length: int
+    sections: List[bytes]
+    block_entities: List[TagRoot]
+
+    # custom protocol
+
+    # if 0, this is not a full chunk. the biomes data will be empty and ignored.
+    # if 1, this is a full chunk and as well as a new chunk
+    # the biomes data should be 4096 bytes long, and client should force save the data
+    # if 2, the biomes data will be empty, but client should find them in the cache.
+    # Unsigned Byte
+    biomes_mode: int
+
+    # with bits set to 1 for every chunk that exist in the original packet
+    # and the client should find those chunks in their cache
+    # VarInt
+    cached_section_mask: int
+
     def __init__(self, data: bytes):
+        self.buff = CustomOriginalBuffer114(data)
+
+    def unpack_vanilla_packet_data(self):
         """
         origin:
         https://github.com/barneygale/quarry/blob/master/docs/data_types/chunks.rst
         """
-        self.buff = CustomOriginalBuffer114(data)
-        self.x: int
-        self.z: int
-        self.full: bool
         self.x, self.z, self.full = self.buff.unpack('ii?')
         self.bitmask = Bits(self.buff.unpack_varint())
-        self.heightmap: TagRoot = self.buff.unpack_nbt()
+        self.heightmap = self.buff.unpack_nbt()
         if self.full:
-            self.biomes: bytes = self.buff.read(4*1024)  # biomes
-        self.section_length: int = self.buff.unpack_varint()  # section_length
-        self.sections: List[bytes] = self.buff.unpack_chunk(self.bitmask.value)
+            self.biomes = self.buff.read(4*1024)  # biomes
+        self.section_length = self.buff.unpack_varint()  # section_length
+        self.sections = self.buff.unpack_chunk(self.bitmask.value)
         self.block_entities = [self.buff.unpack_nbt() for _ in range(self.buff.unpack_varint())]
 
-    def pack_packet_data(self):
+    def pack_vanilla_packet_data(self):
         data1: bytes = self.buff.pack('ii?', self.x, self.z, self.full)
         data_bitmask: bytes = self.buff.pack_varint(self.bitmask.value)
         data_heightmap: bytes = self.buff.pack_nbt(self.heightmap)
