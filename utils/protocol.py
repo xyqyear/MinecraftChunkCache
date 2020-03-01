@@ -1,19 +1,19 @@
 import socket
-import struct
 
-# 1.7 buffer is good enough to recognize packet
-from quarry.types.buffer.v1_7 import Buffer1_7
-from quarry.types.buffer.v1_14 import Buffer1_14
 from quarry.types.buffer import BufferUnderrun
+from quarry.types.buffer.v1_7 import Buffer1_7
+from quarry.types.nbt import TagRoot
 
 from typing import *
 
-
-def no_process(buff: Buffer1_7) -> bytes:
-    return Buffer1_7.pack_packet(buff.buff)
+from utils.buffers import CustomBaseBuffer, CustomOriginalBuffer114
 
 
-def iter_packets_from_socket(source: socket.socket) -> Iterator[Buffer1_7]:
+def no_process(buff: bytes) -> bytes:
+    return buff
+
+
+def iter_packets_from_socket(source: socket.socket) -> Iterator[bytes]:
     """
     return: Buffer1_7 (without the first 'length' varint)
     separate packets from data received
@@ -30,75 +30,43 @@ def iter_packets_from_socket(source: socket.socket) -> Iterator[Buffer1_7]:
         while True:
             recv_buff.save()
             try:
-                packet_buff: Buffer1_7 = recv_buff.unpack_packet(Buffer1_7)
-                yield packet_buff
+                packet = recv_buff.unpack_packet(CustomBaseBuffer)
+                yield packet
             except BufferUnderrun:
                 recv_buff.restore()
                 break
 
 
-def unpack_original_chunk_data_1_15(data: bytes) -> Tuple[int, int, List[bytes]]:
-    """
-    return: x, y, sections (a list of bytes, len=16)
-
-    origin:
-    https://github.com/barneygale/quarry/blob/master/docs/data_types/chunks.rst
-    """
-    buff = CustomOriginalBuffer114(data)
-
-    x, z, full = buff.unpack('ii?')
-    bitmask = buff.unpack_varint()
-    buff.unpack_nbt()  # heightmap
-    if full:
-        buff.read(4*1024)  # biomes
-    buff.unpack_varint_bytes()  # section_length
-    sections: List[bytes] = buff.unpack_chunk(bitmask)
-    for _ in range(buff.unpack_varint()):
-        buff.unpack_nbt()
-
-    return x, z, sections
-
-
-class CustomOriginalBuffer114(Buffer1_14):
-    def unpack_chunk_section_palette(self, value_width):
+class PacketChunkData:
+    def __init__(self, data: bytes):
         """
-        origin: quarry.types.buffer.v1_13.Buffer1_13
+        origin:
+        https://github.com/barneygale/quarry/blob/master/docs/data_types/chunks.rst
         """
-        if value_width > 8:
-            return
-        else:
-            palette_num = self.unpack_varint()
-            palette_bytes = b''
-            for _ in range(palette_num):
-                palette_bytes += self.unpack_varint_bytes()
+        self.buff = CustomOriginalBuffer114(data)
+        self.x: int
+        self.z: int
+        self.full: bool
+        self.x, self.z, self.full = self.buff.unpack('ii?')
+        self.bitmask: int = self.buff.unpack_varint()
+        self.heightmap: TagRoot = self.buff.unpack_nbt()
+        if self.full:
+            self.biomes: bytes = self.buff.read(4*1024)  # biomes
+        self.section_length: int = self.buff.unpack_varint()  # section_length
+        self.sections: List[bytes] = self.buff.unpack_chunk(self.bitmask)
+        self.block_entities = [self.buff.unpack_nbt() for _ in range(self.buff.unpack_varint())]
 
-            palette_num_bytes = self.pack_varint(palette_num)
-            return palette_num_bytes + palette_bytes
+    def pack_packet_data(self):
+        data1: bytes = self.buff.pack('ii?', self.x, self.z, self.full)
+        data_bitmask: bytes = self.buff.pack_varint(self.bitmask)
+        data_heightmap: bytes = self.buff.pack_nbt(self.heightmap)  # added in 1.14
+        data_biomes: bytes = self.biomes if self.full else b''  # changed in 1.15
+        data_sections: bytes = b''.join([i for i in self.sections if i])
+        data_section_length: bytes = self.buff.pack_varint(len(data_sections))
+        data_block_entity_num: bytes = self.buff.pack_varint(len(self.block_entities))
+        data_block_entities: bytes = b''.join(self.buff.pack_nbt(entity) for entity in self.block_entities)
 
-    def unpack_varint_bytes(self):
-        """
-        # origin: quarry.types.buffer.v1_7.Buffer1_7
-        """
+        packet_data = data1 + data_bitmask + data_heightmap + data_biomes + data_section_length \
+                            + data_sections + data_block_entity_num + data_block_entities
 
-        varint_bytes = b''
-        for _ in range(10):
-            b = self.read(1)
-            varint_bytes += b
-            u_char = struct.unpack("B", b)[0]
-            if not u_char & 0x80:
-                break
-        return varint_bytes
-
-    def unpack_chunk_section(self, overworld=True):
-        """
-        Unpacks a chunk section. Returns bytes.
-        origin: quarry.types.buffer.v1_9.Buffer1_9
-        """
-
-        non_air_bytes = self.read(2)
-        value_width_bytes = self.read(1)
-        value_width = struct.unpack('B', value_width_bytes)[0]
-        palette = self.unpack_chunk_section_palette(value_width)
-        array = self.unpack_chunk_section_array(value_width)
-
-        return non_air_bytes + value_width_bytes + palette + array
+        return packet_data
