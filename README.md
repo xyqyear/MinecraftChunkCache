@@ -11,15 +11,26 @@ TODO list:
 - [x] store chunk section hash (server side)
 - [x] finish custom chunk data protocol
 - [x] store chunk section data (client side)
-- [ ] send back ack packet (if server not receive ack, rollback hash in the database)
+- [x] send back ack packet (if server received ack, write hash into the database)
 - [ ] finish biomes data part
-- [ ] add support for multiple clients (client send client ID to server when establish connection, maybe)
+- [ ] add support for multiple clients (client send client ID to server when establish connection. threading.local())
 - [ ] **usable**
 - [ ] finish light data part
 - [ ] let server know when local file changes (usually user deletion)
-- [ ]     or preserve chunk packet in the server. when received ack packet, delete it from preservation table
+- [ ] or preserve chunk packet in the server. when received ack packet, delete it from preservation table
 - [ ] force delete cached chunk when found a block update packet was sent within that chunk (maybe have some performance issues)
 - [ ] **almost finished**
 - [ ] multiple version compatibility
 - [ ] **finished**
 - [ ] (optional) find a way that wouldn't cause hash collision
+
+Protocol:
+
+0xA0: 
+
+    chunk data ack packet
+    data:
+        chunk_x: varint
+        chunk_z: varint
+        section_y: array of sighed char (fmt='B')
+

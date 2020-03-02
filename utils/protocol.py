@@ -1,14 +1,13 @@
 import socket
-import zlib
+from typing import *
+from functools import partial
 
 from quarry.types.buffer import BufferUnderrun
-
-from typing import *
 
 from utils.buffers import BasicPacketBuffer, CustomCompressBuffer17
 
 
-def server_auto_unpack_pack(func):
+def auto_unpack_pack(func, recv_compress=-1, send_compress=-1):
     """
     this decorator can help you
     retract data from full network packet
@@ -18,33 +17,17 @@ def server_auto_unpack_pack(func):
     """
     def wrapper(packet_bytes: bytes) -> bytes:
         packet_buff = CustomCompressBuffer17(packet_bytes)
-        packet = packet_buff.unpack_packet(CustomCompressBuffer17)
+        packet = packet_buff.unpack_packet(CustomCompressBuffer17, recv_compress)
 
         packet_data = func(packet)
 
-        return CustomCompressBuffer17.pack_packet(packet_data, 256)
+        return packet_buff.pack_packet(packet_data, send_compress)
     return wrapper
 
 
-def client_auto_unpack_pack(func):
-    """
-    this decorator can help you
-    retract data from full network packet
-    (trim packet length, return a Buffer)
-    and wrap the data you returned into a full network packet
-    (re-calculate packet length and return a full network packet)
-    """
-    def wrapper(packet_bytes: bytes) -> bytes:
-        packet_buff = CustomCompressBuffer17(packet_bytes)
-        packet = packet_buff.unpack_packet(CustomCompressBuffer17, 256)
-        # the buff in the packet includes uncompressed length
-        # need call save to make sure buff only contains packet data
-        packet.save()
-
-        packet_data = func(packet)
-
-        return CustomCompressBuffer17.pack_packet(packet_data)
-    return wrapper
+compress_auto_unpack_pack = partial(auto_unpack_pack, send_compress=256)
+decompress_auto_unpack_pack = partial(auto_unpack_pack, recv_compress=256)
+nocompress_auto_unpack_pack = auto_unpack_pack
 
 
 def no_process(buff: bytes) -> bytes:
