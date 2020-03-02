@@ -44,10 +44,6 @@ def handle_chunk_data(data: bytes) -> bytes:
             packet_chunk_data.sections[i] = db.get(coords)
             print(packet_chunk_data.x, packet_chunk_data.z, i, "loaded from database")
 
-    for i in range(16):
-        print(packet_chunk_data.x, packet_chunk_data.z, packet_chunk_data.cached_section_mask.get(i), end='')
-    print()
-
     return packet_chunk_data.pack_vanilla_packet_data()
 
 

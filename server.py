@@ -54,10 +54,6 @@ def handle_chunk_data(data: bytes) -> bytes:
                 db.put(coords, current_hash)
                 print(packet_chunk_data.x, packet_chunk_data.z, i, "cached hash")
 
-    for i in range(16):
-        print(packet_chunk_data.x, packet_chunk_data.z, packet_chunk_data.cached_section_mask.get(i), end='')
-    print()
-
     return packet_chunk_data.pack_custom_packet_data()
 
 

@@ -56,10 +56,11 @@ class PacketChunkData:
     # and the client should find those chunks in their cache
     # VarInt
     # in the end of the packet
-    cached_section_mask = Bits()
+    cached_section_mask: Bits
 
     def __init__(self, data: bytes):
         self.buff = CustomVanillaBuffer114(data)
+        self.cached_section_mask = Bits()
 
     def pack_custom_packet_data(self):
         data_x_z = self.pack_x_z()

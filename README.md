@@ -15,7 +15,8 @@ TODO list:
 - [ ] add support for multiple clients (client send client ID to server when establish connection, maybe)
 - [ ] **usable**
 - [ ] finish light data part
-- [ ] acknowledge server when local file changes (usually user deletion)
+- [ ] let server know when local file changes (usually user deletion)
+- [ ] send back ack packet (if server not receive ack, rollback hash in the database)
 - [ ] force delete cached chunk when found a block update packet was sent within that chunk (maybe have some performance issues)
 - [ ] **almost finished**
 - [ ] multiple version compatibility
