@@ -9,6 +9,7 @@ from utils.types import PacketChunkData
 from utils.buffers import VarIntBuffer, CustomCompressBuffer17
 from utils.database import Database
 from utils.packet_ids import CHUNK_DATA, CHUNK_DATA_ACK
+
 listen_ip = '127.0.0.1'
 listen_port = 1000
 dst_ip = '127.0.0.1'
@@ -32,18 +33,18 @@ def handle_chunk_data(data: bytes) -> bytes:
     packet_chunk_data = PacketChunkData(data)
     packet_chunk_data.unpack_custom_packet_data()
     cached_ys = []
-    for i, section in enumerate(packet_chunk_data.sections):
+    for y, section in enumerate(packet_chunk_data.sections):
         # if section exists, put the data into database
         if section:
-            coords = get_chunk_section_coords(packet_chunk_data, i)
+            coords = get_chunk_section_coords(packet_chunk_data, y)
             chunk_section_db.put(coords, zstd.compress(section))
-            cached_ys.append(i)
+            cached_ys.append(y)
 
     # iter cached section mask
-    for i in range(16):
-        if packet_chunk_data.cached_section_mask.get(i):
-            coords = get_chunk_section_coords(packet_chunk_data, i)
-            packet_chunk_data.sections[i] = zstd.decompress(chunk_section_db.get(coords))
+    for y in range(16):
+        if packet_chunk_data.cached_section_mask.get(y):
+            coords = get_chunk_section_coords(packet_chunk_data, y)
+            packet_chunk_data.sections[y] = zstd.decompress(chunk_section_db.get(coords))
 
     # send ack packet
     if cached_ys:

@@ -21,7 +21,12 @@ def forward(source: socket.socket, destination: socket.socket, process: Callable
         # if discard, like chunk data ack pack. we dont want server receive this kind of packet
         if not packet:
             continue
-        local.destination.sendall(packet)
+        try:
+            local.destination.sendall(packet)
+        except OSError:
+            break
+        except ConnectionAbortedError:
+            break
     local.source.close()
     local.destination.close()
 

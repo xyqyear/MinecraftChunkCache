@@ -46,18 +46,18 @@ def handle_chunk_data(data: bytes) -> bytes:
     packet_chunk_data = PacketChunkData(data)
     packet_chunk_data.unpack_vanilla_packet_data()
 
-    for i, section in enumerate(packet_chunk_data.sections):
+    for y, section in enumerate(packet_chunk_data.sections):
         if section:
             # if hash exists
-            coords = get_chunk_section_coords(packet_chunk_data, i)
+            coords = get_chunk_section_coords(packet_chunk_data, y)
             saved_hash = chunk_section_db.get(coords)
             current_hash = hash32(section)
             update_flag = False
             # if section unchanged, then delete section, otherwise, update hash in the database
             if saved_hash:
                 if current_hash == saved_hash:
-                    packet_chunk_data.cached_section_mask.put(i, True)
-                    packet_chunk_data.sections[i] = None
+                    packet_chunk_data.cached_section_mask.put(y, True)
+                    packet_chunk_data.sections[y] = None
                 else:
                     update_flag = True
             else:
