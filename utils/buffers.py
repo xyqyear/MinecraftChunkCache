@@ -1,7 +1,46 @@
 import struct
+import zstd
 
 from quarry.types.buffer import BufferUnderrun
 from quarry.types.buffer.v1_14 import Buffer1_14
+from quarry.types.buffer.v1_7 import Buffer1_7
+
+
+class CustomCompressBuffer17(Buffer1_7):
+    """
+    using zstd compression for better performance
+    """
+    @classmethod
+    def pack_packet(cls, data, compression_threshold=-1):
+        """
+        Unpacks a packet frame. This method handles length-prefixing and
+        compression.
+        """
+
+        if compression_threshold >= 0:
+            # Compress data and prepend uncompressed data length
+            if len(data) >= compression_threshold:
+                data = cls.pack_varint(len(data)) + zstd.compress(data)
+            else:
+                data = cls.pack_varint(0) + data
+
+        # Prepend packet length
+        return cls.pack_varint(len(data), max_bits=32) + data
+
+    def unpack_packet(self, cls, compression_threshold=-1):
+        """
+        Unpacks a packet frame. This method handles length-prefixing and
+        compression.
+        """
+        body = self.read(self.unpack_varint(max_bits=32))
+        buff = cls(body)
+        if compression_threshold >= 0:
+            uncompressed_length = buff.unpack_varint()
+            if uncompressed_length > 0:
+                body = zstd.decompress(buff.read())
+                buff = cls(body)
+
+        return buff
 
 
 class CustomVanillaBuffer114(Buffer1_14):

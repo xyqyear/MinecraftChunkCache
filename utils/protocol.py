@@ -2,11 +2,10 @@ import socket
 import zlib
 
 from quarry.types.buffer import BufferUnderrun
-from quarry.types.buffer.v1_7 import Buffer1_7
 
 from typing import *
 
-from utils.buffers import BasicPacketBuffer
+from utils.buffers import BasicPacketBuffer, CustomCompressBuffer17
 
 
 def server_auto_unpack_pack(func):
@@ -18,12 +17,12 @@ def server_auto_unpack_pack(func):
     (re-calculate packet length and return a full network packet)
     """
     def wrapper(packet_bytes: bytes) -> bytes:
-        packet_buff = Buffer1_7(packet_bytes)
-        packet = packet_buff.unpack_packet(Buffer1_7)
+        packet_buff = CustomCompressBuffer17(packet_bytes)
+        packet = packet_buff.unpack_packet(CustomCompressBuffer17)
 
         packet_data = func(packet)
 
-        return Buffer1_7.pack_packet(packet_data, 256)
+        return CustomCompressBuffer17.pack_packet(packet_data, 256)
     return wrapper
 
 
@@ -36,15 +35,15 @@ def client_auto_unpack_pack(func):
     (re-calculate packet length and return a full network packet)
     """
     def wrapper(packet_bytes: bytes) -> bytes:
-        packet_buff = Buffer1_7(packet_bytes)
-        packet = packet_buff.unpack_packet(Buffer1_7, 256)
+        packet_buff = CustomCompressBuffer17(packet_bytes)
+        packet = packet_buff.unpack_packet(CustomCompressBuffer17, 256)
         # the buff in the packet includes uncompressed length
         # need call save to make sure buff only contains packet data
         packet.save()
 
         packet_data = func(packet)
 
-        return Buffer1_7.pack_packet(packet_data)
+        return CustomCompressBuffer17.pack_packet(packet_data)
     return wrapper
 
 

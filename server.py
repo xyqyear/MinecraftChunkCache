@@ -42,7 +42,6 @@ def handle_chunk_data(data: bytes) -> bytes:
             # if section unchanged, then delete section, otherwise, update hash in the database
             if saved_hash:
                 if current_hash == saved_hash:
-                    print(packet_chunk_data.x, packet_chunk_data.z, i, "cache found")
                     packet_chunk_data.cached_section_mask.put(i, True)
                     packet_chunk_data.sections[i] = None
                 else:
@@ -52,7 +51,6 @@ def handle_chunk_data(data: bytes) -> bytes:
 
             if update_flag:
                 db.put(coords, current_hash)
-                print(packet_chunk_data.x, packet_chunk_data.z, i, "cached hash")
 
     return packet_chunk_data.pack_custom_packet_data()
 

@@ -1,8 +1,9 @@
 import struct
+import zstd
 
 from quarry.types.buffer.v1_7 import Buffer1_7
 
-from utils.network import proxy
+from utils.network import proxy, get_sockets
 from utils.protocol import client_auto_unpack_pack
 from utils.types import PacketChunkData
 from utils.buffers import VarIntBuffer
@@ -34,15 +35,13 @@ def handle_chunk_data(data: bytes) -> bytes:
         # if section exists, put the data into database
         if section:
             coords = get_chunk_section_coords(packet_chunk_data, i)
-            db.put(coords, section)
-            print(packet_chunk_data.x, packet_chunk_data.z, i, "caching...")
+            db.put(coords, zstd.compress(section))
 
     # iter cached section mask
     for i in range(16):
         if packet_chunk_data.cached_section_mask.get(i):
             coords = get_chunk_section_coords(packet_chunk_data, i)
-            packet_chunk_data.sections[i] = db.get(coords)
-            print(packet_chunk_data.x, packet_chunk_data.z, i, "loaded from database")
+            packet_chunk_data.sections[i] = zstd.decompress(db.get(coords))
 
     return packet_chunk_data.pack_vanilla_packet_data()
 

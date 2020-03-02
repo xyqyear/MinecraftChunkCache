@@ -29,7 +29,7 @@ if db_lib.__name__ == 'leveldb':
 
         def get(self, key):
             try:
-                return self.db.Get(key)
+                return bytes(self.db.Get(key))
             except KeyError:
                 return b''
 

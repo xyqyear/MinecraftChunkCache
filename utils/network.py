@@ -4,6 +4,8 @@ from typing import *
 
 from utils.protocol import iter_packets_from_socket, no_process
 
+sockets = {}
+
 
 def forward(source: socket.socket, destination: socket.socket, process: Callable[[bytes], bytes]) -> None:
     """
@@ -33,7 +35,12 @@ def proxy(listen_ip: str, listen_port: int, dst_ip: str, dst_port: int,
                 client_socket = proxy_socket.accept()[0]
                 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 server_socket.connect((dst_ip, dst_port))
+                sockets['server'] = server_socket
                 threading.Thread(target=forward, args=(client_socket, server_socket, c2s_process)).start()
                 threading.Thread(target=forward, args=(server_socket, client_socket, s2c_process)).start()
         finally:
             pass
+
+
+def get_sockets(key: str):
+    return sockets[key]
