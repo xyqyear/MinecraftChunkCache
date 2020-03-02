@@ -1,43 +1,58 @@
-# using lmdb since installing leveldb on windows is a nightmare
-import lmdb
-import sys
+"""
+tests for 1M number data
+leveldb:
+cpu: 16.5%, disk-io: 6mb/s,   disk-space: 27.7MB
+lsm:
+cpu: 16.9%, disk-io: 2.2mb/s, disk-space: 50.2MB
+"""
+import os
 
-WINDOWS_BASE_MAP_SIZE = 1024**2
-LINUX_BASE_MAP_SIZE = 1024**3
+try:
+    # windows: conda install python-leveldb
+    import leveldb as db_lib
+except ImportError:
+    import lsm as db_lib
 
 
-class Database:
-    env: lmdb.Environment
-    txn: lmdb.Transaction
-    map_size = 0
-    if sys.platform == 'linux':
-        base_map_size = LINUX_BASE_MAP_SIZE
-    else:
-        base_map_size = WINDOWS_BASE_MAP_SIZE
+def makedir(path: str):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-    def __init__(self, path: str):
-        self.env = lmdb.open(path)
-        self.increase_map_size()
-        self.txn = self.env.begin(write=True)
 
-    def save(self):
-        self.env.sync()
+if db_lib.__name__ == 'leveldb':
+    class Database:
+        def __init__(self, path: str):
+            makedir(path)
+            self.db = db_lib.LevelDB(path)
 
-    def put(self, key: bytes, value: bytes) -> bool:
-        try:
-            return self.txn.put(key, value)
-        except lmdb.MapFullError:
-            self.txn.abort()
-            self.increase_map_size()
-            self.txn = self.env.begin(write=True)
-            return self.put(key, value)
+        def get(self, key):
+            try:
+                return self.db.Get(key)
+            except KeyError:
+                return b''
 
-    def get(self, key: bytes) -> bytes:
-        return self.txn.get(key)
+        def put(self, key, value):
+            self.db.Put(key, value)
 
-    def delete(self, key: bytes) -> bool:
-        return self.delete(key)
+        def delete(self, key):
+            try:
+                self.db.Delete(key)
+                return True
+            except KeyError:
+                return False
 
-    def increase_map_size(self):
-        self.map_size += self.base_map_size
-        self.env.set_mapsize(self.map_size)
+elif db_lib.__name__ == 'lsm':
+    class Database:
+        def __init__(self, path: str):
+            makedir(path)
+            self.db = db_lib.LSM(path)
+
+        def get(self, key):
+            return self.db[key]
+
+        def put(self, key, value):
+            self.db[key] = value
+
+        def delete(self, key):
+            del self.db[key]
+            return True

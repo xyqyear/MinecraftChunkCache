@@ -8,10 +8,6 @@ class CustomVanillaBuffer114(Buffer1_14):
     def unpack_chunk_section_palette_bytes(self, value_width):
         """
         origin: quarry.types.buffer.v1_13.Buffer1_13
-        if value_width > 8:
-            return []
-        else:
-            return [self.unpack_varint() for _ in xrange(self.unpack_varint())]
         """
         palette_bytes = b''
         if value_width > 8:

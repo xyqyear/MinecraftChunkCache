@@ -39,7 +39,7 @@ def handle_chunk_data(data: bytes) -> bytes:
 
     section_dict = get_chunk_section_keys_values(packet_chunk_data)
     for key, value in section_dict.items():
-        db.put(key, hash32(value))
+        db.put(key, value)
 
     return packet_chunk_data.pack_vanilla_packet_data()
 

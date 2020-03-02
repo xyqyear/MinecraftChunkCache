@@ -12,12 +12,6 @@ dst_port = 2000
 
 @client_auto_unpack_pack
 def tweak(buff: Buffer1_7) -> bytes:
-    packet_id = buff.unpack_varint()
-    if packet_id == 0x22:
-        packet_chunk_data = PacketChunkData(buff.buff[buff.pos:])
-        packet_chunk_data.unpack_vanilla_packet_data()
-        return buff.pack_varint(packet_id) + packet_chunk_data.pack_vanilla_packet_data()
-
     return buff.buff
 
 
