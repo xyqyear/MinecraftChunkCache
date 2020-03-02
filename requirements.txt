@@ -1,4 +1,4 @@
-lsm
+lsm-db
 zstd
 quarry
 mmh3
