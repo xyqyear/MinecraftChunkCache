@@ -15,6 +15,8 @@ except ImportError:
 
 
 def makedir(path: str):
+    if db_lib.__name__ == 'lsm':
+        path = os.path.split(path)[0]
     if not os.path.exists(path):
         os.makedirs(path)
 

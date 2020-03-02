@@ -9,8 +9,8 @@ TODO list:
 - [x] compress packet using the minecraft way
 - [x] setup database
 - [x] store chunk section hash (server side)
-- [ ] finish custom chunk data protocol
-- [ ] store chunk section data (client side)
+- [x] finish custom chunk data protocol
+- [x] store chunk section data (client side)
 - [ ] finish biomes data part
 - [ ] add support for multiple clients (client send client ID to server when establish connection, maybe)
 - [ ] **usable**
