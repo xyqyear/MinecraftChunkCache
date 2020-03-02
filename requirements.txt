@@ -1,0 +1,7 @@
+lsm
+zstd
+quarry
+mmh3
+
+# optional on windows
+leveldb
