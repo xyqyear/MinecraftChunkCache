@@ -1,5 +1,6 @@
 import struct
 import zstd
+import zlib
 
 from quarry.types.buffer import BufferUnderrun
 from quarry.types.buffer.v1_14 import Buffer1_14
@@ -8,36 +9,47 @@ from quarry.types.buffer.v1_7 import Buffer1_7
 
 class CustomCompressBuffer17(Buffer1_7):
     """
-    using zstd compression for better performance
+    using custom compression method
     """
     @classmethod
-    def pack_packet(cls, data, compression_threshold=-1):
+    def pack_packet_custom(cls, data, compression_threshold, compression_method):
         """
         Unpacks a packet frame. This method handles length-prefixing and
         compression.
         """
 
+        if compression_method == 'zstd':
+            comp_lib = zstd
+        else:
+            comp_lib = zlib
+
         if compression_threshold >= 0:
             # Compress data and prepend uncompressed data length
             if len(data) >= compression_threshold:
-                data = cls.pack_varint(len(data)) + zstd.compress(data)
+                data = cls.pack_varint(len(data)) + comp_lib.compress(data)
             else:
                 data = cls.pack_varint(0) + data
 
         # Prepend packet length
         return cls.pack_varint(len(data), max_bits=32) + data
 
-    def unpack_packet(self, cls, compression_threshold=-1):
+    def unpack_packet_custom(self, compression_threshold, compression_method):
         """
         Unpacks a packet frame. This method handles length-prefixing and
         compression.
         """
+        if compression_method == 'zstd':
+            comp_lib = zstd
+        else:
+            comp_lib = zlib
+
+        cls = self.__class__
         body = self.read(self.unpack_varint(max_bits=32))
         buff = cls(body)
         if compression_threshold >= 0:
             uncompressed_length = buff.unpack_varint()
             if uncompressed_length > 0:
-                body = zstd.decompress(buff.read())
+                body = comp_lib.decompress(buff.read())
                 buff = cls(body)
 
         return buff
@@ -185,7 +197,7 @@ class VarIntBuffer(BaseBuffer):
                 break
         return out
 
-    def unpack_varint(self, max_bits=32):
+    def unpack_varint(self):
         """
         Unpacks a varint.
         """

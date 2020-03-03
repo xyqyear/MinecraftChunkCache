@@ -1,26 +1,23 @@
 import socket
 import threading
 from typing import *
-from functools import partial
 
 from quarry.types.buffer import BufferUnderrun
 
 from utils.buffers import BasicPacketBuffer, CustomCompressBuffer17
-from utils.types import PacketHandshake, PacketLoginSuccess
+from utils.types import PacketHandshake, PacketLoginSuccess, PacketSetCompression
 from utils.packet_ids import *
 from utils.state_constants import *
 from utils.database import Database
+from utils.config_manager import config
+from utils.role_manager import get_role
 
-"""
-clients = {0: {state: int, chunk_section_db: Database, chunk_section_hash: dict, ...}, 1: {...}}
-"""
+# {0: {state: int, compression_threshold: int, chunk_section_db: Database, chunk_section_hash: dict, ...}, 1: {...}}
 sessions = {}
 local = threading.local()
-# 0: proxy server, 1: proxy client
-role = 0
 
 
-def auto_unpack_pack(process, recv_compress=-1, send_compress=-1):
+def auto_process_protocol(process):
     """
     this decorator can help you
     retract data from full network packet
@@ -30,7 +27,18 @@ def auto_unpack_pack(process, recv_compress=-1, send_compress=-1):
     """
     def wrapper(packet_bytes: bytes) -> bytes:
         packet_buff = CustomCompressBuffer17(packet_bytes)
-        packet = packet_buff.unpack_packet(CustomCompressBuffer17, recv_compress)
+
+        mc_compression_threshold = get_session_info('compression_threshold')
+
+        # basically an xor
+        # if data from proxy
+        if (get_role() == 0 and local.direction == 0) or (get_role() == 1 and local.direction == 1):
+            packet = packet_buff.unpack_packet_custom(config['compression_threshold'],
+                                                      config['compression_method'])
+        else:
+            packet = packet_buff.unpack_packet_custom(mc_compression_threshold,
+                                                      'zlib')
+
         packet_id = packet.unpack_varint()
         packet_data = packet.buff[packet.pos:]
 
@@ -38,25 +46,29 @@ def auto_unpack_pack(process, recv_compress=-1, send_compress=-1):
         # if packet from client to server
         if local.direction == 0:
             # if handshaking
-            if get_client_info('state') == HANDSHAKING:
+            if get_session_info('state') == HANDSHAKING:
                 if packet_id == HANDSHAKE:
                     packet_handshake = PacketHandshake(packet_data)
-                    set_client_info('state', packet_handshake.next_state)
+                    set_session_info('state', packet_handshake.next_state)
 
         # if packet from server to client
         elif local.direction == 1:
-            if get_client_info('state') == LOGIN:
-                if packet_id == LOGIN_SUCCESS:
+            if get_session_info('state') == LOGIN:
+                if packet_id == SET_COMPRESSION:
+                    packet_compression_threshold = PacketSetCompression(packet_data)
+                    set_session_info('compression_threshold', packet_compression_threshold.threshold)
+
+                elif packet_id == LOGIN_SUCCESS:
                     packet_login_success = PacketLoginSuccess(packet_data)
-                    sessions[local.session_id]['state'] = PLAY
+                    set_session_info('state', PLAY)
 
                     # start init database and hash table
                     db_path = f'data/{"client" if get_role() else "server"}' \
                               f'/{packet_login_success.username}/chunk_sections'
-                    set_client_info('chunk_section_db', Database(db_path))
+                    set_session_info('chunk_section_db', Database(db_path))
                     # if server
                     if get_role() == 0:
-                        set_client_info('chunk_section_hash', dict())
+                        set_session_info('chunk_section_hash', dict())
 
         handled_packet_data = process(packet_id, packet_data)
 
@@ -65,35 +77,22 @@ def auto_unpack_pack(process, recv_compress=-1, send_compress=-1):
             return b''
 
         packet_data = packet_buff.pack_varint(packet_id) + handled_packet_data
-        return packet_buff.pack_packet(packet_data, send_compress)
+
+        # if data to minecraft
+        if (get_role() == 0 and local.direction == 0) or (get_role() == 1 and local.direction == 1):
+            return packet_buff.pack_packet_custom(packet_data, mc_compression_threshold, 'zlib')
+        else:
+            return packet_buff.pack_packet_custom(packet_data, config['compression_threshold'],
+                                                  config['compression_method'])
 
     return wrapper
 
 
-compress_auto_unpack_pack = partial(auto_unpack_pack, send_compress=256)
-decompress_auto_unpack_pack = partial(auto_unpack_pack, recv_compress=256)
-nocompress_auto_unpack_pack = auto_unpack_pack
-
-
-def no_process(buff: bytes) -> bytes:
-    return buff
-
-
-def set_role(r: int):
-    global role
-    role = r
-
-
-def get_role() -> int:
-    global role
-    return role
-
-
-def get_client_info(key: str):
+def get_session_info(key: str):
     return sessions[local.session_id][key]
 
 
-def set_client_info(key: str, value):
+def set_session_info(key: str, value):
     sessions[local.session_id][key] = value
 
 

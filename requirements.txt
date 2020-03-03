@@ -2,6 +2,7 @@ lsm-db
 zstd
 quarry
 mmh3
+PyYAML
 
 # optional on windows
 leveldb

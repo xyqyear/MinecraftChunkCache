@@ -1,0 +1,8 @@
+listen_ip: 0.0.0.0
+listen_port: 25001
+
+server_ip: 127.0.0.1
+server_port: 25000
+
+compression_threshold: 256
+compression_method: zstd

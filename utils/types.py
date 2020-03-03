@@ -157,3 +157,11 @@ class PacketLoginSuccess:
         buff = Buffer1_7(data)
         self.uuid = buff.unpack_string()
         self.username = buff.unpack_string()
+
+
+class PacketSetCompression:
+    threshold: int
+
+    def __init__(self, data: bytes):
+        buff = Buffer1_7(data)
+        self.threshold = buff.unpack_varint()

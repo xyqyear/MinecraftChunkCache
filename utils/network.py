@@ -2,7 +2,7 @@ import socket
 import threading
 from typing import *
 
-from utils.protocol import iter_packets_from_socket, no_process, sessions, local
+from utils.protocol import iter_packets_from_socket, sessions, local
 
 
 def forward(source: socket.socket, destination: socket.socket,
@@ -21,11 +21,12 @@ def forward(source: socket.socket, destination: socket.socket,
     local.destination = destination
 
     if local.session_id not in sessions:
-        sessions[local.session_id] = {'state': 0}
+        sessions[local.session_id] = {'state': 0, 'compression_threshold': -1}
     for packet in iter_packets_from_socket(local.source):
         try:
             packet = process(packet)
-        except KeyError:
+        except KeyError as e:
+            print(e)
             continue
 
         # if discard, like chunk data ack packet. we dont want mc server to receive this kind of packet
@@ -45,7 +46,7 @@ def forward(source: socket.socket, destination: socket.socket,
 
 
 def proxy(listen_ip: str, listen_port: int, dst_ip: str, dst_port: int,
-          s2c_process: Callable[[bytes], bytes], c2s_process: Callable[[bytes], bytes] = no_process):
+          s2c_process: Callable[[bytes], bytes], c2s_process: Callable[[bytes], bytes]):
     """
     a proxy that forwards data
     """
