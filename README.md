@@ -1,4 +1,4 @@
-usable, but lack of document and config file
+usable, but lack of document (lazy)
 
 TODO list:
 

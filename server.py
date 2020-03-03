@@ -17,7 +17,6 @@ set_role(0)
 def s2c_process(packet_id: int, packet_data: bytes):
     if get_session_info('state') == PLAY:
         if packet_id == CHUNK_DATA:
-            print(1)
             packet_data = handle_chunk_data(packet_data)
 
     return packet_data
