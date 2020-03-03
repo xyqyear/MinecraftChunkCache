@@ -1,6 +1,7 @@
 from typing import *
 
 from quarry.types.nbt import TagRoot
+from quarry.types.buffer.v1_7 import Buffer1_7
 
 from utils.buffers import CustomVanillaBuffer114
 
@@ -132,3 +133,27 @@ class PacketChunkData:
 
     def unpack_cached_section_mask(self):
         self.cached_section_mask = Bits(self.buff.unpack_varint())
+
+
+class PacketHandshake:
+    protocol_version: int
+    server_address: str
+    server_port: int
+    next_state: int
+
+    def __init__(self, data: bytes):
+        buff = Buffer1_7(data)
+        self.protocol_version = buff.unpack_varint()
+        self.server_address = buff.unpack_string()
+        self.server_port = buff.unpack('H')  # unsigned short
+        self.next_state = buff.unpack_varint()
+
+
+class PacketLoginSuccess:
+    uuid: str
+    username: str
+
+    def __init__(self, data: bytes):
+        buff = Buffer1_7(data)
+        self.uuid = buff.unpack_string()
+        self.username = buff.unpack_string()

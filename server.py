@@ -1,45 +1,38 @@
 import struct
 
-from quarry.types.buffer.v1_7 import Buffer1_7
-
 from utils.network import proxy
-from utils.protocol import compress_auto_unpack_pack, nocompress_auto_unpack_pack
+from utils.protocol import compress_auto_unpack_pack, nocompress_auto_unpack_pack, set_role, get_client_info
 from utils.types import PacketChunkData
 from utils.buffers import VarIntBuffer
-from utils.database import Database
 from utils.hashes import hash32
-from utils.packet_ids import CHUNK_DATA, CHUNK_DATA_ACK
+from utils.packet_ids import *
+from utils.state_constants import *
 
 listen_ip = '127.0.0.1'
-listen_port = 2000
+listen_port = 9000
 dst_ip = '127.0.0.1'
 dst_port = 25565
 
-chunk_section_db = Database('data/test/chunk_sections_hash')
-chunk_section_hash = dict()
+set_role(0)
 
 
 @compress_auto_unpack_pack
-def s2c_process(buff: Buffer1_7) -> bytes:
-    packet_id = buff.unpack_varint()
-    packet_data = buff.buff[buff.pos:]
+def s2c_process(packet_id: int, packet_data: bytes):
+    if get_client_info('state') == PLAY:
+        if packet_id == CHUNK_DATA:
+            packet_data = handle_chunk_data(packet_data)
 
-    if packet_id == CHUNK_DATA:
-        packet_data = handle_chunk_data(packet_data)
-
-    return buff.pack_varint(packet_id) + packet_data
+    return packet_data
 
 
 @nocompress_auto_unpack_pack
-def c2s_process(buff: Buffer1_7) -> bytes:
-    packet_id = buff.unpack_varint()
-    packet_data = buff.buff[buff.pos:]
+def c2s_process(packet_id: int, packet_data: bytes):
+    if get_client_info('state') == PLAY:
+        if packet_id == CHUNK_DATA_ACK:
+            handle_chunk_data_ack(packet_data)
+            return None
 
-    if packet_id == CHUNK_DATA_ACK:
-        handle_chunk_data_ack(packet_data)
-        return b''
-
-    return buff.pack_varint(packet_id) + packet_data
+    return packet_data
 
 
 def handle_chunk_data(data: bytes) -> bytes:
@@ -50,7 +43,7 @@ def handle_chunk_data(data: bytes) -> bytes:
         if section:
             # if hash exists
             coords = get_chunk_section_coords(packet_chunk_data, y)
-            saved_hash = chunk_section_db.get(coords)
+            saved_hash = get_client_info('chunk_section_db').get(coords)
             current_hash = hash32(section)
             update_flag = False
             # if section unchanged, then delete section, otherwise, update hash in the database
@@ -64,7 +57,7 @@ def handle_chunk_data(data: bytes) -> bytes:
                 update_flag = True
 
             if update_flag:
-                chunk_section_hash[coords] = current_hash
+                get_client_info('chunk_section_hash')[coords] = current_hash
 
     return packet_chunk_data.pack_custom_packet_data()
 
@@ -80,9 +73,9 @@ def handle_chunk_data_ack(data: bytes):
     for y in buff.buff:
         coords = x_z_bytes + struct.pack('B', y)
         # del hash in dict before it goes into database to prevent sudden crash or forced close
-        section = chunk_section_hash[coords]
-        del chunk_section_hash[coords]
-        chunk_section_db.put(coords, section)
+        section = get_client_info('chunk_section_hash')[coords]
+        del get_client_info('chunk_section_hash')[coords]
+        get_client_info('chunk_section_db').put(coords, section)
 
 
 def get_chunk_section_coords(chunk: PacketChunkData, y: int) -> bytes:

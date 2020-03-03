@@ -1,4 +1,4 @@
-NOT FINISHED YET
+usable, but lack of document and config file
 
 TODO list:
 
@@ -12,10 +12,12 @@ TODO list:
 - [x] finish custom chunk data protocol
 - [x] store chunk section data (client side)
 - [x] send back ack packet (if server received ack, write hash into the database)
-- [ ] finish biomes data part
-- [ ] add support for multiple clients (client send client ID to server when establish connection. threading.local())
-- [ ] **usable**
+- [x] add support for multiple clients (client send client ID to server when establish connection. threading.local())
+- [x] add support for multiple minecraft clients under a single proxy client
+- [x] **usable**
+- [ ] delete session from session list when it's not active anymore (to save memory and release file pointer, maybe no need for this)
 - [ ] finish light data part
+- [ ] finish biomes data part
 - [ ] let server know when local file changes (usually user deletion)
 - [ ] or preserve chunk packet in the server. when received ack packet, delete it from preservation table
 - [ ] force delete cached chunk when found a block update packet was sent within that chunk (maybe have some performance issues)
