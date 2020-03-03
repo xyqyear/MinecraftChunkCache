@@ -1,4 +1,4 @@
-usable, but lack of document (lazy)
+usable, but lack of documentation (lazy)
 
 TODO list:
 
