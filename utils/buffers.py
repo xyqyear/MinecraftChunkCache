@@ -116,6 +116,9 @@ class BaseBuffer:
         if data:
             self.buff = data
 
+    def __len__(self):
+        return len(self.buff) - self.pos
+
     def add(self, data: bytes):
         """
         Add some bytes to the end of the buffer.

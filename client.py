@@ -1,15 +1,17 @@
-import struct
 import zstd
 
 from utils.network import proxy
 from utils.protocol import auto_process_protocol, local, get_session_info
-from utils.types import PacketChunkData
-from utils.buffers import VarIntBuffer, CustomCompressBuffer17
+from utils.buffers import CustomCompressBuffer17, VarIntBuffer
+from utils.types import PacketChunkData, PacketChunkDataAck
 from utils.packet_ids import *
 from utils.config_manager import load_config, config
 from utils.role_manager import set_role
 
 set_role(1)
+
+varint_buffer = VarIntBuffer()
+compress_buffer = CustomCompressBuffer17()
 
 
 @auto_process_protocol
@@ -33,35 +35,39 @@ def handle_chunk_data(data: bytes) -> bytes:
     for y, section in enumerate(packet_chunk_data.sections):
         # if section exists, put the data into database
         if section:
-            coords = get_chunk_section_coords(packet_chunk_data, y)
+            coords = packet_chunk_data.get_coords_bytes(y)
             get_session_info('chunk_section_db').put(coords, zstd.compress(section))
             cached_ys.append(y)
 
     # iter cached section mask
     for y in range(16):
         if packet_chunk_data.cached_section_mask.get(y):
-            coords = get_chunk_section_coords(packet_chunk_data, y)
+            coords = packet_chunk_data.get_coords_bytes(y)
             packet_chunk_data.sections[y] = zstd.decompress(get_session_info('chunk_section_db').get(coords))
 
     # send ack packet
     if cached_ys:
-        coords = VarIntBuffer.pack_varint(packet_chunk_data.x) + VarIntBuffer.pack_varint(packet_chunk_data.z)
+        packet_chunk_data_ack = PacketChunkDataAck()
+
+        packet_chunk_data_ack.dimension = get_session_info('dimension')
+        packet_chunk_data_ack.chunk_x = packet_chunk_data.x
+        packet_chunk_data_ack.chunk_z = packet_chunk_data.z
+        print(packet_chunk_data.x, packet_chunk_data.z)
         for y in cached_ys:
-            coords += struct.pack('B', y)
+            packet_chunk_data_ack.section_ys.append(y)
+
         try:
-            local.source.sendall(
-                CustomCompressBuffer17.pack_packet_custom(VarIntBuffer.pack_varint(CHUNK_DATA_ACK) + coords,
-                                                          config['compression_threshold'],
-                                                          config['compression_method'])
-            )
+            send_packet(CHUNK_DATA_ACK, packet_chunk_data_ack.pack_packet())
         except OSError:
             pass
 
     return packet_chunk_data.pack_vanilla_packet_data()
 
 
-def get_chunk_section_coords(chunk: PacketChunkData, y: int) -> bytes:
-    return VarIntBuffer.pack_varint(chunk.x) + VarIntBuffer.pack_varint(chunk.z) + struct.pack('B', y)
+def send_packet(packet_id, data):
+    local.source.sendall(compress_buffer.pack_packet_custom(varint_buffer.pack_varint(packet_id) + data,
+                                                            config['compression_threshold'],
+                                                            config['compression_method']))
 
 
 def main():

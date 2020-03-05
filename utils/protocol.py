@@ -1,11 +1,10 @@
 import socket
 import threading
-from typing import *
 
 from quarry.types.buffer import BufferUnderrun
 
 from utils.buffers import BasicPacketBuffer, CustomCompressBuffer17
-from utils.types import PacketHandshake, PacketLoginSuccess, PacketSetCompression
+from utils.types import *
 from utils.packet_ids import *
 from utils.state_constants import *
 from utils.database import Database
@@ -18,13 +17,6 @@ local = threading.local()
 
 
 def auto_process_protocol(process):
-    """
-    this decorator can help you
-    retract data from full network packet
-    (trim packet length, return a Buffer)
-    and wrap the data you returned into a full network packet
-    (re-calculate packet length and return a full network packet)
-    """
     def wrapper(packet_bytes: bytes) -> bytes:
         packet_buff = CustomCompressBuffer17(packet_bytes)
 
@@ -32,7 +24,7 @@ def auto_process_protocol(process):
 
         # basically an xor
         # if data from proxy
-        if (get_role() == 0 and local.direction == 0) or (get_role() == 1 and local.direction == 1):
+        if get_role() == local.direction:
             packet = packet_buff.unpack_packet_custom(config['compression_threshold'],
                                                       config['compression_method'])
         else:
@@ -42,7 +34,6 @@ def auto_process_protocol(process):
         packet_id = packet.unpack_varint()
         packet_data = packet.buff[packet.pos:]
 
-        # state switching
         # if packet from client to server
         if local.direction == 0:
             # if handshaking
@@ -61,14 +52,16 @@ def auto_process_protocol(process):
                 elif packet_id == LOGIN_SUCCESS:
                     packet_login_success = PacketLoginSuccess(packet_data)
                     set_session_info('state', PLAY)
+                    set_session_info('username', packet_login_success.username)
 
-                    # start init database and hash table
-                    db_path = f'data/{"client" if get_role() else "server"}' \
-                              f'/{packet_login_success.username}/chunk_sections'
-                    set_session_info('chunk_section_db', Database(db_path))
-                    # if server
-                    if get_role() == 0:
-                        set_session_info('chunk_section_hash', dict())
+            if get_session_info('state') == PLAY:
+                if packet_id == JOIN_GAME:
+                    packet_join_game = PacketJoinGame(packet_data)
+                    reset_dimension(packet_join_game.dimension)
+
+                elif packet_id == RESPAWN:
+                    packet_respawn = PacketRespawn(packet_data)
+                    reset_dimension(packet_respawn.dimension)
 
         handled_packet_data = process(packet_id, packet_data)
 
@@ -79,13 +72,25 @@ def auto_process_protocol(process):
         packet_data = packet_buff.pack_varint(packet_id) + handled_packet_data
 
         # if data to minecraft
-        if (get_role() == 0 and local.direction == 0) or (get_role() == 1 and local.direction == 1):
+        if get_role() == local.direction:
             return packet_buff.pack_packet_custom(packet_data, mc_compression_threshold, 'zlib')
         else:
             return packet_buff.pack_packet_custom(packet_data, config['compression_threshold'],
                                                   config['compression_method'])
 
     return wrapper
+
+
+def reset_dimension(dimension: int):
+    set_session_info('dimension', dimension)
+
+    # start init database and hash table
+    db_path = f'data/{"client" if get_role() else "server"}' \
+              f'/{get_session_info("username")}/{dimension}/chunk_sections'
+    set_session_info('chunk_section_db', Database(db_path))
+    # if server
+    if get_role() == 0:
+        set_session_info('chunk_section_hash', dict())
 
 
 def get_session_info(key: str):

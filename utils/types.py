@@ -3,7 +3,7 @@ from typing import *
 from quarry.types.nbt import TagRoot
 from quarry.types.buffer.v1_7 import Buffer1_7
 
-from utils.buffers import CustomVanillaBuffer114
+from utils.buffers import CustomVanillaBuffer114, VarIntBuffer, BaseBuffer
 
 
 class Bits:
@@ -134,7 +134,11 @@ class PacketChunkData:
     def unpack_cached_section_mask(self):
         self.cached_section_mask = Bits(self.buff.unpack_varint())
 
+    def get_coords_bytes(self, y):
+        return self.buff.pack_varint(self.x) + self.buff.pack_varint(self.z) + self.buff.pack('B', y)
 
+
+# --- vanilla packets ---
 class PacketHandshake:
     protocol_version: int
     server_address: str
@@ -163,5 +167,52 @@ class PacketSetCompression:
     threshold: int
 
     def __init__(self, data: bytes):
-        buff = Buffer1_7(data)
+        buff = VarIntBuffer(data)
         self.threshold = buff.unpack_varint()
+
+
+class PacketJoinGame:
+    entity_id: int
+    gamemode: int
+    dimension: int
+
+    def __init__(self, data):
+        buff = VarIntBuffer(data)
+        self.entity_id = buff.unpack('i')
+        self.gamemode = buff.unpack('B')
+        self.dimension = buff.unpack('i')
+
+
+class PacketRespawn:
+    dimension: int
+
+    def __init__(self, data):
+        buff = BaseBuffer(data)
+        self.dimension = buff.unpack('i')
+
+
+# --- custom packets ---
+class PacketChunkDataAck:
+    dimension: int
+    chunk_x: int
+    chunk_z: int
+    section_ys: List[int]
+
+    def __init__(self):
+        self.section_ys = []
+
+    def pack_packet(self):
+        buff = VarIntBuffer()
+        data_dimension = buff.pack('i', self.dimension)
+        data_chunk_x = buff.pack_varint(self.chunk_x)
+        data_chunk_z = buff.pack_varint(self.chunk_z)
+        data_section_y = b''.join(buff.pack('B', i) for i in self.section_ys)
+        return data_dimension + data_chunk_x + data_chunk_z + data_section_y
+
+    def unpack_packet(self, data):
+        buff = VarIntBuffer(data)
+        self.dimension = buff.unpack('i')
+        self.chunk_x = buff.unpack_varint()
+        self.chunk_z = buff.unpack_varint()
+        while len(buff):
+            self.section_ys.append(buff.unpack('B'))

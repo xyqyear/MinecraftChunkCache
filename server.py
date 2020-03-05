@@ -1,8 +1,6 @@
-import struct
-
 from utils.network import proxy
 from utils.protocol import auto_process_protocol, get_session_info
-from utils.types import PacketChunkData
+from utils.types import PacketChunkData, PacketChunkDataAck
 from utils.buffers import VarIntBuffer
 from utils.hashes import hash32
 from utils.packet_ids import *
@@ -11,6 +9,8 @@ from utils.config_manager import load_config, config
 from utils.role_manager import set_role
 
 set_role(0)
+
+varint_buffer = VarIntBuffer
 
 
 @auto_process_protocol
@@ -39,7 +39,7 @@ def handle_chunk_data(data: bytes) -> bytes:
     for y, section in enumerate(packet_chunk_data.sections):
         if section:
             # if hash exists
-            coords = get_chunk_section_coords(packet_chunk_data, y)
+            coords = packet_chunk_data.get_coords_bytes(y)
             saved_hash = get_session_info('chunk_section_db').get(coords)
             current_hash = hash32(section)
             update_flag = False
@@ -60,23 +60,24 @@ def handle_chunk_data(data: bytes) -> bytes:
 
 
 def handle_chunk_data_ack(data: bytes):
-    buff = VarIntBuffer(data)
-    x = buff.unpack_varint()
-    z = buff.unpack_varint()
-    buff.save()
-    x_z_bytes = buff.pack_varint(x) + buff.pack_varint(z)
+    packet_chunk_data_ack = PacketChunkDataAck()
+    packet_chunk_data_ack.unpack_packet(data)
 
-    # y is int for some reason
-    for y in buff.buff:
-        coords = x_z_bytes + struct.pack('B', y)
+    if packet_chunk_data_ack.dimension != get_session_info('dimension'):
+        return
+
+    x = packet_chunk_data_ack.chunk_x
+    z = packet_chunk_data_ack.chunk_z
+    x_z_bytes = varint_buffer.pack_varint(x) + varint_buffer.pack_varint(z)
+
+    for y in packet_chunk_data_ack.section_ys:
+        coords = x_z_bytes + varint_buffer.pack('B', y)
         # del hash in dict before it goes into database to prevent sudden crash or forced close
-        section = get_session_info('chunk_section_hash')[coords]
-        del get_session_info('chunk_section_hash')[coords]
-        get_session_info('chunk_section_db').put(coords, section)
-
-
-def get_chunk_section_coords(chunk: PacketChunkData, y: int) -> bytes:
-    return VarIntBuffer.pack_varint(chunk.x) + VarIntBuffer.pack_varint(chunk.z) + struct.pack('B', y)
+        hash_dict = get_session_info('chunk_section_hash')
+        if coords in hash_dict:
+            section = hash_dict[coords]
+            del hash_dict[coords]
+            get_session_info('chunk_section_db').put(coords, section)
 
 
 def main():

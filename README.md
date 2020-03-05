@@ -14,7 +14,7 @@ TODO list:
 - [x] send back ack packet (if server received ack, write hash into the database)
 - [x] add support for multiple clients (client send client ID to server when establish connection. threading.local())
 - [x] add support for multiple minecraft clients under a single proxy client
-- [ ] add support for multi dimension
+- [x] add support for multi dimension
 - [ ] **usable**
 - [ ] delete session from session list when it's not active anymore (to save memory and release file pointer, maybe no need for this)
 - [ ] finish light data part
@@ -33,6 +33,7 @@ Protocol:
 
     chunk data ack packet
     data:
+        dimension: int
         chunk_x: varint
         chunk_z: varint
         section_y: array of sighed char (fmt='B')

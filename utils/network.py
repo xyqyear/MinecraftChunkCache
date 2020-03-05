@@ -21,12 +21,11 @@ def forward(source: socket.socket, destination: socket.socket,
     local.destination = destination
 
     if local.session_id not in sessions:
-        sessions[local.session_id] = {'state': 0, 'compression_threshold': -1}
+        sessions[local.session_id] = {'state': 0, 'compression_threshold': -1, 'dimension': 0, 'username': ''}
     for packet in iter_packets_from_socket(local.source):
         try:
             packet = process(packet)
-        except KeyError as e:
-            print(e)
+        except KeyError:
             continue
 
         # if discard, like chunk data ack packet. we dont want mc server to receive this kind of packet
