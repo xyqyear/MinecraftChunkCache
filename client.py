@@ -52,7 +52,6 @@ def handle_chunk_data(data: bytes) -> bytes:
         packet_chunk_data_ack.dimension = get_session_info('dimension')
         packet_chunk_data_ack.chunk_x = packet_chunk_data.x
         packet_chunk_data_ack.chunk_z = packet_chunk_data.z
-        print(packet_chunk_data.x, packet_chunk_data.z)
         for y in cached_ys:
             packet_chunk_data_ack.section_ys.append(y)
 

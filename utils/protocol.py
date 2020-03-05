@@ -42,6 +42,11 @@ def auto_process_protocol(process):
                     packet_handshake = PacketHandshake(packet_data)
                     set_session_info('state', packet_handshake.next_state)
 
+            elif get_session_info('state') == LOGIN:
+                if packet_id == LOGIN_START:
+                    packet_login_start = PacketLoginStart(packet_data)
+                    set_session_info('username', packet_login_start.username)
+
         # if packet from server to client
         elif local.direction == 1:
             if get_session_info('state') == LOGIN:
@@ -50,9 +55,7 @@ def auto_process_protocol(process):
                     set_session_info('compression_threshold', packet_compression_threshold.threshold)
 
                 elif packet_id == LOGIN_SUCCESS:
-                    packet_login_success = PacketLoginSuccess(packet_data)
                     set_session_info('state', PLAY)
-                    set_session_info('username', packet_login_success.username)
 
             if get_session_info('state') == PLAY:
                 if packet_id == JOIN_GAME:

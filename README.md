@@ -15,7 +15,7 @@ TODO list:
 - [x] add support for multiple clients (client send client ID to server when establish connection. threading.local())
 - [x] add support for multiple minecraft clients under a single proxy client
 - [x] add support for multi dimension
-- [ ] **usable**
+- [x] **usable**
 - [ ] delete session from session list when it's not active anymore (to save memory and release file pointer, maybe no need for this)
 - [ ] finish light data part
 - [ ] finish biomes data part
@@ -29,8 +29,7 @@ TODO list:
 
 Protocol:
 
-0xA0: 
-
+0xA0:
     chunk data ack packet
     data:
         dimension: int
@@ -38,3 +37,8 @@ Protocol:
         chunk_z: varint
         section_y: array of sighed char (fmt='B')
 
+0x22:
+    chunk data packet
+    data:
+        \[same content as vanilla packet here\]
+        cached_section_mask: int
